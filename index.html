@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YatraAI - Smart Travel App</title>
+    
+    <!-- Tailwind CSS & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet JS & CSS for Free Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        #map, #explore-map { height: 260px; width: 100%; border-radius: 20px; z-index: 1; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-slate-800 flex justify-center min-h-screen font-sans">
+
+    <!-- Mobile Frame -->
+    <div class="w-full max-w-md bg-white border-x border-gray-200 min-h-screen flex flex-col justify-between relative shadow-2xl pb-20">
+
+        <!-- Header -->
+        <header class="bg-white/95 backdrop-blur sticky top-0 z-50 px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid fa-mountain text-white text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black tracking-tight text-slate-900 leading-none">YatraAI</h1>
+                    <span class="text-[10px] text-blue-600 font-semibold">Smart Travel • SIH 26204</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="switchTab('profile')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-slate-600 hover:bg-gray-200">
+                    <i class="fa-regular fa-user text-sm"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Screen Content -->
+        <main class="flex-1 px-4 py-5 overflow-y-auto hide-scroll">
+
+            <!-- TAB 1: HOME SCREEN -->
+            <div id="tab-home" class="tab-content space-y-5">
+                <div class="relative rounded-3xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 p-6 overflow-hidden shadow-xl text-white">
+                    <div class="relative z-10">
+                        <span class="bg-white/20 text-white text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur">DISCOVER INDIA</span>
+                        <h2 class="text-xl font-black mt-2 leading-tight">Explore 12+ States & Local Gems</h2>
+                        <p class="text-xs text-blue-100 mt-1">AI-powered itinerary with safety, crowd, and vendor contacts.</p>
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setCategoryQuick('heritage')" class="flex flex-col items-center p-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-blue-500 shadow-sm">
+                        <div class="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mb-1"><i class="fa-solid fa-landmark"></i></div>
+                        <span class="text-[10px] text-slate-700 font-semibold">Heritage</span>
+                    </button>
+                    <button onclick="setCategoryQuick('nature')" class="flex flex-col items-center p-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-blue-500 shadow-sm">
+                        <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-1"><i class="fa-solid fa-tree"></i></div>
+                        <span class="text-[10px] text-slate-700 font-semibold">Nature</span>
+                    </button>
+                    <button onclick="setCategoryQuick('adventure')" class="flex flex-col items-center p-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-blue-500 shadow-sm">
+                        <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center mb-1"><i class="fa-solid fa-person-hiking"></i></div>
+                        <span class="text-[10px] text-slate-700 font-semibold">Adventure</span>
+                    </button>
+                    <button onclick="setCategoryQuick('spiritual')" class="flex flex-col items-center p-3 bg-gray-50 border border-gray-100 rounded-2xl hover:border-blue-500 shadow-sm">
+                        <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-1"><i class="fa-solid fa-om"></i></div>
+                        <span class="text-[10px] text-slate-700 font-semibold">Spiritual</span>
+                    </button>
+                </div>
+
+                <!-- AI Form -->
+                <div class="bg-gray-50 border border-gray-200/80 rounded-3xl p-5 shadow-sm space-y-4">
+                    <div class="flex items-center gap-2 border-b border-gray-200 pb-3">
+                        <i class="fa-solid fa-wand-magic-sparkles text-blue-600"></i>
+                        <h3 class="font-bold text-sm text-slate-900">AI Trip Planner</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Select State / City</label>
+                            <select id="state_select" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-blue-500 shadow-sm">
+                                <option value="up_jhansi">Uttar Pradesh - Jhansi & Orchha Region</option>
+                                <option value="mp">Madhya Pradesh - Heritage & Wildlife</option>
+                                <option value="rj">Rajasthan - Royal Forts & Palaces</option>
+                                <option value="mh">Maharashtra - Caves & Western Ghats</option>
+                                <option value="uk">Uttarakhand - Divine Himalayas</option>
+                                <option value="hp">Himachal Pradesh - Valleys & Passes</option>
+                                <option value="kl">Kerala - Backwaters & Hills</option>
+                                <option value="ga">Goa - Beaches & Culture</option>
+                                <option value="gj">Gujarat - Heritage & Wildlife</option>
+                                <option value="tn">Tamil Nadu - Temple Architecture</option>
+                                <option value="ka">Karnataka - Ancient Ruins & Coffee Trails</option>
+                                <option value="wb">West Bengal - Culture & Hills</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Vibe</label>
+                                <select id="category" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-blue-500 shadow-sm">
+                                    <option value="heritage">🏰 Heritage</option>
+                                    <option value="nature">🌿 Nature</option>
+                                    <option value="adventure">🧗 Adventure</option>
+                                    <option value="spiritual">🕉️ Spiritual</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Crowd</label>
+                                <select id="crowd_pref" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-blue-500 shadow-sm">
+                                    <option value="all">Any Crowd</option>
+                                    <option value="low">Low Crowd</option>
+                                    <option value="moderate">Moderate</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="generatePlan()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs flex justify-center items-center gap-2 shadow-lg shadow-blue-500/25 cursor-pointer">
+                        <i class="fa-solid fa-sparkles"></i> Generate 10-Spot Itinerary ✨
+                    </button>
+                </div>
+
+                <!-- Plan Output -->
+                <div id="output" class="hidden space-y-5">
+                    <div class="bg-gray-50 border border-gray-200 p-4 rounded-2xl flex justify-between items-center text-center shadow-sm">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Safety Rating</span>
+                            <span id="res-safety" class="text-xs font-bold text-emerald-600">9.5 / 10</span>
+                        </div>
+                        <div class="h-6 w-[1px] bg-gray-200"></div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Places</span>
+                            <span id="res-places-count" class="text-xs font-bold text-blue-600">10 Places</span>
+                        </div>
+                        <div class="h-6 w-[1px] bg-gray-200"></div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Est. Budget</span>
+                            <span id="res-budget" class="text-xs font-bold text-amber-600">₹1,500</span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 p-3 rounded-3xl space-y-2 shadow-sm">
+                        <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5 px-1"><i class="fa-solid fa-map text-blue-600"></i> Region Route Map</span>
+                        <div id="map"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"><i class="fa-solid fa-route text-blue-600"></i> 10 Local Places Included</h4>
+                        <div id="itinerary-container" class="space-y-2"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"><i class="fa-solid fa-hotel text-emerald-600"></i> Verified Homestays & Stays</h4>
+                        <div id="stays-list" class="space-y-2"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"><i class="fa-solid fa-store text-amber-600"></i> Local Artisans & Demo Contacts</h4>
+                        <div id="vendors-list" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: EXPLORE SCREEN -->
+            <div id="tab-explore" class="tab-content hidden space-y-4">
+                <h3 class="text-sm font-bold text-slate-900">Explore Interactive Map & Places</h3>
+                <div class="bg-gray-50 border border-gray-200 p-3 rounded-2xl">
+                    <div id="explore-map"></div>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-slate-700">All Available Destination Spots:</h4>
+                    <div id="explore-places-list" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- TAB 3: TRIPS SCREEN -->
+            <div id="tab-trips" class="tab-content hidden space-y-4">
+                <h3 class="text-sm font-bold text-slate-900">My Saved & Active Trips</h3>
+                <div id="trips-container" class="space-y-3">
+                    <div class="p-4 bg-gray-50 border border-gray-200 rounded-2xl text-center py-8">
+                        <i class="fa-solid fa-suitcase-rolling text-3xl text-slate-300 mb-2"></i>
+                        <p class="text-xs font-semibold text-slate-600">No active trip generated yet.</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Generate a plan from Home tab to load itinerary here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: BOOKINGS SCREEN -->
+            <div id="tab-bookings" class="tab-content hidden space-y-4">
+                <h3 class="text-sm font-bold text-slate-900">My Bookings</h3>
+                <div id="bookings-container" class="space-y-3">
+                    <div class="p-4 bg-gray-50 border border-gray-200 rounded-2xl text-center py-8">
+                        <i class="fa-solid fa-ticket text-3xl text-slate-300 mb-2"></i>
+                        <p class="text-xs font-semibold text-slate-600">0 Active Bookings</p>
+                        <p class="text-[10px] text-slate-400 mt-1">You have not booked any stays yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: PROFILE SCREEN -->
+            <div id="tab-profile" class="tab-content hidden space-y-4">
+                <div id="profile-card" class="bg-gray-50 border border-gray-200 p-5 rounded-3xl text-center space-y-3 shadow-sm">
+                    <div class="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto shadow-md">
+                        YA
+                    </div>
+                    <div>
+                        <h3 id="profile-name" class="text-sm font-bold text-slate-900">Yatra Traveler</h3>
+                        <p id="profile-email" class="text-[11px] text-slate-500">tourist.demo@yatraai.in</p>
+                        <span class="inline-block mt-2 text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">Verified SIH Tourist ID</span>
+                    </div>
+                </div>
+
+                <!-- Emergency Helpline Contacts -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-rose-600"></i> Safety & Emergency Helplines</h4>
+                    <div class="bg-white border border-gray-200 rounded-2xl p-3 space-y-2 text-xs">
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-1.5">
+                            <span class="font-medium text-slate-700"><i class="fa-solid fa-phone text-rose-500 mr-2"></i> National Emergency</span>
+                            <a href="tel:112" class="font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg">112</a>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-1.5">
+                            <span class="font-medium text-slate-700"><i class="fa-solid fa-truck-medical text-emerald-500 mr-2"></i> Ambulance Helpline</span>
+                            <a href="tel:108" class="font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">108</a>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-1.5">
+                            <span class="font-medium text-slate-700"><i class="fa-solid fa-hand-holding-hand text-purple-500 mr-2"></i> Women Helpline</span>
+                            <a href="tel:1091" class="font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg">1091</a>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-slate-700"><i class="fa-solid fa-headset text-blue-500 mr-2"></i> Tourist Safety Support</span>
+                            <a href="tel:1363" class="font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">1363</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Language Selector -->
+                <div class="bg-white border border-gray-200 rounded-2xl p-3 space-y-1.5">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"><i class="fa-solid fa-globe text-blue-600 mr-1"></i> App Language</label>
+                    <select id="app_language" onchange="changeLanguage(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800">
+                        <option value="en">English (Default)</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                    </select>
+                </div>
+
+                <!-- Logout Button -->
+                <button onclick="handleLogout()" class="w-full p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-bold text-rose-600 flex justify-center items-center gap-2 cursor-pointer hover:bg-rose-100 transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> Log Out Account
+                </button>
+            </div>
+
+        </main>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="fixed bottom-0 max-w-md w-full bg-white/95 backdrop-blur border-t border-gray-200 px-4 py-2 flex justify-around items-center z-50">
+            <button id="nav-home" onclick="switchTab('home')" class="nav-btn flex flex-col items-center gap-1 text-blue-600">
+                <i class="fa-solid fa-house text-base"></i>
+                <span class="text-[9px] font-bold">Home</span>
+            </button>
+            <button id="nav-explore" onclick="switchTab('explore')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700">
+                <i class="fa-solid fa-compass text-base"></i>
+                <span class="text-[9px] font-semibold">Explore</span>
+            </button>
+            <button id="nav-trips" onclick="switchTab('trips')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700">
+                <i class="fa-solid fa-suitcase text-base"></i>
+                <span class="text-[9px] font-semibold">Trips</span>
+            </button>
+            <button id="nav-bookings" onclick="switchTab('bookings')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700">
+                <i class="fa-solid fa-ticket text-base"></i>
+                <span class="text-[9px] font-semibold">Bookings</span>
+            </button>
+            <button id="nav-profile" onclick="switchTab('profile')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-700">
+                <i class="fa-regular fa-user text-base"></i>
+                <span class="text-[9px] font-semibold">Profile</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- Vendor Contact Modal Popup -->
+    <div id="vendor-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="bg-white rounded-3xl max-w-xs w-full p-5 space-y-4 shadow-2xl text-center border border-gray-100">
+            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-store"></i>
+            </div>
+            <div>
+                <h4 id="modal-vendor-name" class="font-bold text-sm text-slate-900">Vendor Contact</h4>
+                <p id="modal-vendor-type" class="text-[11px] text-slate-500">Local Artisan</p>
+            </div>
+            <div class="bg-gray-50 border border-gray-200 p-3 rounded-xl font-mono text-xs font-bold text-blue-600">
+                📞 <span id="modal-vendor-phone">+91 98765 43210</span>
+            </div>
+            <div class="flex gap-2">
+                <a id="modal-call-btn" href="tel:+919876543210" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-xl text-xs">Call Demo</a>
+                <button onclick="closeVendorModal()" class="flex-1 bg-gray-200 text-slate-700 font-bold py-2 rounded-xl text-xs">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Data & Logic -->
+    <script>
+        const STATES_DATA = {
+            "up_jhansi": {
+                "name": "Jhansi & Orchha Region (UP)",
+                "center": [25.4484, 78.5685],
+                "safety": "9.6 / 10",
+                "places": [
+                    {"name": "Jhansi Fort (Rani Laxmibai Durg)", "lat": 25.4568, "lng": 78.5774, "cost": 25},
+                    {"name": "Rani Mahal Museum", "lat": 25.4542, "lng": 78.5790, "cost": 10},
+                    {"name": "Barua Sagar Lake & Fort", "lat": 25.3670, "lng": 78.7320, "cost": 0},
+                    {"name": "Orchha Ram Raja Temple", "lat": 25.3508, "lng": 78.6415, "cost": 0},
+                    {"name": "Jahangir Mahal (Orchha Fort)", "lat": 25.3510, "lng": 78.6430, "cost": 100},
+                    {"name": "Parichha Dam & Picnic Spot", "lat": 25.5220, "lng": 78.7560, "cost": 0},
+                    {"name": "St. Jude's Shrine Jhansi", "lat": 25.4410, "lng": 78.5620, "cost": 0},
+                    {"name": "Government Museum Jhansi", "lat": 25.4470, "lng": 78.5710, "cost": 15},
+                    {"name": "Chhatris (Cenotaphs) Orchha", "lat": 25.3460, "lng": 78.6440, "cost": 50},
+                    {"name": "Laxmi Temple Jhansi", "lat": 25.4510, "lng": 78.5830, "cost": 0}
+                ],
+                "stays": [{"name": "Bundelkhand Heritage Stay", "price": 1200}],
+                "vendors": [{"name": "Bundelkhand Brass Art", "type": "Local Handicraft", "phone": "+91 98765 43210"}]
+            },
+            "mp": {
+                "name": "Madhya Pradesh",
+                "center": [23.2599, 77.4126],
+                "safety": "9.4 / 10",
+                "places": [
+                    {"name": "Khajuraho Group of Temples", "lat": 24.8318, "lng": 79.9199, "cost": 40},
+                    {"name": "Gwalior Fort", "lat": 26.2295, "lng": 78.1732, "cost": 75},
+                    {"name": "Sanchi Stupa", "lat": 23.4793, "lng": 77.7396, "cost": 40},
+                    {"name": "Bhedaghat Marble Rocks Jabalpur", "lat": 23.1310, "lng": 79.8000, "cost": 100},
+                    {"name": "Pachmarhi Hill Station", "lat": 22.4674, "lng": 78.4344, "cost": 50},
+                    {"name": "Mahakaleshwar Temple Ujjain", "lat": 23.1827, "lng": 75.7682, "cost": 0},
+                    {"name": "Kanha Tiger Reserve", "lat": 22.3345, "lng": 80.6115, "cost": 250},
+                    {"name": "Bandhavgarh National Park", "lat": 23.7225, "lng": 81.0253, "cost": 300},
+                    {"name": "Mandu Eco Fortress", "lat": 22.3659, "lng": 75.3948, "cost": 25},
+                    {"name": "Bhimbetka Prehistoric Caves", "lat": 22.9364, "lng": 77.6125, "cost": 25}
+                ],
+                "stays": [{"name": "MP Tourism Jungle Resort", "price": 2200}],
+                "vendors": [{"name": "Chanderi Saree Weavers", "type": "Handloom Vendor", "phone": "+91 98765 43211"}]
+            },
+            "rj": {
+                "name": "Rajasthan",
+                "center": [26.9124, 75.7873],
+                "safety": "9.5 / 10",
+                "places": [
+                    {"name": "Hawa Mahal Jaipur", "lat": 26.9239, "lng": 75.8267, "cost": 50},
+                    {"name": "Amer Fort Jaipur", "lat": 26.9855, "lng": 75.8513, "cost": 100},
+                    {"name": "City Palace Udaipur", "lat": 24.5764, "lng": 73.6835, "cost": 300},
+                    {"name": "Jaisalmer Golden Fort", "lat": 26.9124, "lng": 70.9126, "cost": 100},
+                    {"name": "Mehrangarh Fort Jodhpur", "lat": 26.2978, "lng": 73.0185, "cost": 100},
+                    {"name": "Pushkar Holy Lake", "lat": 26.4897, "lng": 74.5511, "cost": 0},
+                    {"name": "Ranthambore National Park", "lat": 26.0173, "lng": 76.5026, "cost": 200},
+                    {"name": "Chittorgarh Fort", "lat": 24.8879, "lng": 74.6453, "cost": 40},
+                    {"name": "Mount Abu Dilwara Temples", "lat": 24.5926, "lng": 72.7156, "cost": 0},
+                    {"name": "Junagarh Fort Bikaner", "lat": 28.0169, "lng": 73.3118, "cost": 50}
+                ],
+                "stays": [{"name": "Haveli Palace Resort", "price": 2500}],
+                "vendors": [{"name": "Rajputi Handicraft Emporium", "type": "Artifacts", "phone": "+91 98765 43212"}]
+            },
+            "mh": {
+                "name": "Maharashtra",
+                "center": [19.0760, 72.8777],
+                "safety": "9.3 / 10",
+                "places": [
+                    {"name": "Gateway of India Mumbai", "lat": 18.9220, "lng": 72.8347, "cost": 0},
+                    {"name": "Ajanta Caves Aurangabad", "lat": 20.5519, "lng": 75.7033, "cost": 40},
+                    {"name": "Ellora Caves", "lat": 20.0268, "lng": 75.1780, "cost": 40},
+                    {"name": "Mahabaleshwar Venna Lake", "lat": 17.9237, "lng": 73.6586, "cost": 0},
+                    {"name": "Shirdi Sai Baba Temple", "lat": 19.7645, "lng": 74.4762, "cost": 0},
+                    {"name": "Marine Drive Promenade", "lat": 18.9438, "lng": 72.8230, "cost": 0},
+                    {"name": "Lonavala Tiger Point", "lat": 18.7557, "lng": 73.4091, "cost": 0},
+                    {"name": "Sinhagad Fort Pune", "lat": 18.3663, "lng": 73.7559, "cost": 20},
+                    {"name": "Elephanta Caves Island", "lat": 18.9633, "lng": 72.9315, "cost": 40},
+                    {"name": "Matheran Hill Station", "lat": 18.9867, "lng": 73.2679, "cost": 50}
+                ],
+                "stays": [{"name": "Sahyadri Heritage Stay", "price": 1900}],
+                "vendors": [{"name": "Kolhapuri Chappal Store", "type": "Footwear Artisan", "phone": "+91 98765 43213"}]
+            },
+            "uk": {
+                "name": "Uttarakhand",
+                "center": [30.0668, 79.0193],
+                "safety": "9.7 / 10",
+                "places": [
+                    {"name": "Kedarnath Dham Temple", "lat": 30.7346, "lng": 79.0669, "cost": 0},
+                    {"name": "Badrinath Temple", "lat": 30.7433, "lng": 79.4938, "cost": 0},
+                    {"name": "Rishikesh Triveni Ghat", "lat": 30.1033, "lng": 78.2948, "cost": 0},
+                    {"name": "Haridwar Har Ki Pauri", "lat": 29.9560, "lng": 78.1700, "cost": 0},
+                    {"name": "Nainital Naini Lake", "lat": 29.3919, "lng": 79.4542, "cost": 0},
+                    {"name": "Mussoorie Mall Road", "lat": 30.4598, "lng": 78.0644, "cost": 0},
+                    {"name": "Auli Skiing Slopes", "lat": 30.5280, "lng": 79.5690, "cost": 0},
+                    {"name": "Valley of Flowers National Park", "lat": 30.7280, "lng": 79.6050, "cost": 150},
+                    {"name": "Jim Corbett National Park", "lat": 29.5300, "lng": 78.7747, "cost": 200},
+                    {"name": "Chopta Tungnath Temple", "lat": 30.4882, "lng": 79.2185, "cost": 0}
+                ],
+                "stays": [{"name": "Himalayan Eco Lodge", "price": 1600}],
+                "vendors": [{"name": "Devbhoomi Woolen Store", "type": "Handicrafts", "phone": "+91 98765 43214"}]
+            },
+            "hp": {
+                "name": "Himachal Pradesh",
+                "center": [31.1048, 77.1734],
+                "safety": "9.6 / 10",
+                "places": [
+                    {"name": "Shimla Ridge & Mall Road", "lat": 31.1048, "lng": 77.1734, "cost": 0},
+                    {"name": "Manali Solang Valley", "lat": 32.3166, "lng": 77.1578, "cost": 0},
+                    {"name": "McLeod Ganj Dharamshala", "lat": 32.2426, "lng": 76.3213, "cost": 0},
+                    {"name": "Spiti Valley Kaza", "lat": 32.2276, "lng": 78.0710, "cost": 0},
+                    {"name": "Kasol Parvati River Bank", "lat": 32.0100, "lng": 77.3150, "cost": 0},
+                    {"name": "Dalhousie Khajjiar Lake", "lat": 32.5457, "lng": 76.0601, "cost": 0},
+                    {"name": "Rohtang Snow Pass", "lat": 32.3716, "lng": 77.2466, "cost": 500},
+                    {"name": "Kufri Fun World", "lat": 31.0979, "lng": 77.2672, "cost": 100},
+                    {"name": "Atal Tunnel North Portal", "lat": 32.3615, "lng": 77.0864, "cost": 0},
+                    {"name": "Chamba Central Square", "lat": 32.5534, "lng": 76.1258, "cost": 0}
+                ],
+                "stays": [{"name": "Pine View Wooden Cottage", "price": 2000}],
+                "vendors": [{"name": "Kullu Shawl Weaver Outlet", "type": "Handloom", "phone": "+91 98765 43215"}]
+            },
+            "kl": {
+                "name": "Kerala",
+                "center": [9.9312, 76.2673],
+                "safety": "9.8 / 10",
+                "places": [
+                    {"name": "Alleppey Houseboat Backwaters", "lat": 9.4981, "lng": 76.3388, "cost": 500},
+                    {"name": "Munnar Tea Gardens", "lat": 10.0889, "lng": 77.0595, "cost": 0},
+                    {"name": "Wayanad Edakkal Caves", "lat": 11.6103, "lng": 76.2343, "cost": 50},
+                    {"name": "Fort Kochi Chinese Nets", "lat": 9.9656, "lng": 76.2421, "cost": 0},
+                    {"name": "Kovalam Lighthouse Beach", "lat": 8.4004, "lng": 76.9787, "cost": 0},
+                    {"name": "Varkala Cliff Beach", "lat": 8.7379, "lng": 76.7163, "cost": 0},
+                    {"name": "Bekal Fort Kasaragod", "lat": 12.3924, "lng": 75.0337, "cost": 25},
+                    {"name": "Athirappilly Waterfalls", "lat": 10.2851, "lng": 76.5698, "cost": 50},
+                    {"name": "Kumarakom Bird Sanctuary", "lat": 9.6175, "lng": 76.4273, "cost": 100},
+                    {"name": "Thekkady Periyar Wildlife", "lat": 9.4679, "lng": 77.1429, "cost": 200}
+                ],
+                "stays": [{"name": "Kerala Backwater Homestay", "price": 1800}],
+                "vendors": [{"name": "Spices & Coconut Craft Shop", "type": "Organic Store", "phone": "+91 98765 43216"}]
+            },
+            "ga": {
+                "name": "Goa",
+                "center": [15.2993, 74.1240],
+                "safety": "9.4 / 10",
+                "places": [
+                    {"name": "Baga Beach Water Sports", "lat": 15.5553, "lng": 73.7517, "cost": 0},
+                    {"name": "Calangute Beach", "lat": 15.5494, "lng": 73.7535, "cost": 0},
+                    {"name": "Basilica of Bom Jesus", "lat": 15.5009, "lng": 73.9116, "cost": 0},
+                    {"name": "Fort Aguada Lighthouse", "lat": 15.4924, "lng": 73.7737, "cost": 50},
+                    {"name": "Dudhsagar Waterfalls", "lat": 15.3144, "lng": 74.3143, "cost": 100},
+                    {"name": "Anjuna Flea Market Shore", "lat": 15.5782, "lng": 73.7410, "cost": 0},
+                    {"name": "Palolem Beach South Goa", "lat": 15.0100, "lng": 74.0232, "cost": 0},
+                    {"name": "Chapora Dil Chahta Hai Fort", "lat": 15.6056, "lng": 73.7364, "cost": 0},
+                    {"name": "Panjim Fontainhas Latin Quarter", "lat": 15.4989, "lng": 73.8310, "cost": 0},
+                    {"name": "Se Cathedral Old Goa", "lat": 15.5035, "lng": 73.9123, "cost": 0}
+                ],
+                "stays": [{"name": "Goan Beachside Cottage", "price": 2100}],
+                "vendors": [{"name": "Goan Shell Crafts", "type": "Beach Souvenir", "phone": "+91 98765 43217"}]
+            },
+            "gj": {
+                "name": "Gujarat",
+                "center": [23.2156, 72.6369],
+                "safety": "9.7 / 10",
+                "places": [
+                    {"name": "Statue of Unity Kevadia", "lat": 21.8380, "lng": 73.7191, "cost": 150},
+                    {"name": "Rann of Kutch White Desert", "lat": 23.7845, "lng": 69.8597, "cost": 100},
+                    {"name": "Somnath Jyotirlinga Temple", "lat": 20.8880, "lng": 70.4012, "cost": 0},
+                    {"name": "Dwarkadhish Temple Dwarka", "lat": 22.2376, "lng": 68.9674, "cost": 0},
+                    {"name": "Gir National Park Lions", "lat": 21.1243, "lng": 70.8242, "cost": 300},
+                    {"name": "Sabarmati Ashram Ahmedabad", "lat": 23.0602, "lng": 72.5807, "cost": 0},
+                    {"name": "Sun Temple Modhera", "lat": 23.5835, "lng": 72.1331, "cost": 25},
+                    {"name": "Champaner Pavagadh Park", "lat": 22.4842, "lng": 73.5358, "cost": 30},
+                    {"name": "Saputara Hill Station", "lat": 20.5780, "lng": 73.7483, "cost": 0},
+                    {"name": "Laxmi Vilas Palace Vadodara", "lat": 22.2938, "lng": 73.1915, "cost": 200}
+                ],
+                "stays": [{"name": "Kutch Heritage Resort Tents", "price": 2400}],
+                "vendors": [{"name": "Bandhani Textile Artisan", "type": "Ethnic Apparel", "phone": "+91 98765 43218"}]
+            },
+            "tn": {
+                "name": "Tamil Nadu",
+                "center": [13.0827, 80.2707],
+                "safety": "9.6 / 10",
+                "places": [
+                    {"name": "Meenakshi Amman Temple Madurai", "lat": 9.9195, "lng": 78.1193, "cost": 0},
+                    {"name": "Brihadeeswarar Tanjore Temple", "lat": 10.7828, "lng": 79.1318, "cost": 0},
+                    {"name": "Marina Beach Chennai", "lat": 13.0499, "lng": 80.2824, "cost": 0},
+                    {"name": "Ooty Botanical Gardens", "lat": 11.4167, "lng": 76.7119, "cost": 30},
+                    {"name": "Kodaikanal Lake", "lat": 10.2381, "lng": 77.4892, "cost": 0},
+                    {"name": "Rameshwaram Ramanathaswamy", "lat": 9.2881, "lng": 79.3174, "cost": 0},
+                    {"name": "Kanyakumari Sunset View", "lat": 8.0883, "lng": 77.5385, "cost": 0},
+                    {"name": "Mahabalipuram Shore Temple", "lat": 12.6169, "lng": 80.1992, "cost": 40},
+                    {"name": "Nilgiri Mountain Train", "lat": 11.3530, "lng": 76.7959, "cost": 100},
+                    {"name": "Chidambaram Nataraja Temple", "lat": 11.3992, "lng": 79.6933, "cost": 0}
+                ],
+                "stays": [{"name": "Nilgiri Heritage Villa", "price": 1750}],
+                "vendors": [{"name": "Tanjore Painting Studio", "type": "Artisan Store", "phone": "+91 98765 43219"}]
+            },
+            "ka": {
+                "name": "Karnataka",
+                "center": [12.9716, 77.5946],
+                "safety": "9.5 / 10",
+                "places": [
+                    {"name": "Hampi Stone Chariot Ruins", "lat": 15.3350, "lng": 76.4600, "cost": 40},
+                    {"name": "Mysore Royal Palace", "lat": 12.3052, "lng": 76.6552, "cost": 100},
+                    {"name": "Coorg Abbey Waterfalls", "lat": 12.4560, "lng": 75.7170, "cost": 15},
+                    {"name": "Badami Cave Temples", "lat": 15.9189, "lng": 75.6766, "cost": 25},
+                    {"name": "Chikmagalur Coffee Estate", "lat": 13.3161, "lng": 75.7720, "cost": 0},
+                    {"name": "Gokarna Om Beach", "lat": 14.5190, "lng": 74.3183, "cost": 0},
+                    {"name": "Jog Falls Shimoga", "lat": 14.2269, "lng": 74.8122, "cost": 20},
+                    {"name": "Bandipur Tiger Reserve", "lat": 11.6664, "lng": 76.6291, "cost": 250},
+                    {"name": "Pattadakal Temple Complex", "lat": 15.9489, "lng": 75.8157, "cost": 40},
+                    {"name": "Belur Halebidu Architecture", "lat": 13.1623, "lng": 75.8647, "cost": 25}
+                ],
+                "stays": [{"name": "Coorg Coffee Estate Homestay", "price": 1950}],
+                "vendors": [{"name": "Channapatna Wooden Toys", "type": "Craftsmen", "phone": "+91 98765 43220"}]
+            },
+            "wb": {
+                "name": "West Bengal",
+                "center": [22.5726, 88.3639],
+                "safety": "9.4 / 10",
+                "places": [
+                    {"name": "Victoria Memorial Kolkata", "lat": 22.5448, "lng": 88.3426, "cost": 30},
+                    {"name": "Sundarbans National Park", "lat": 21.9497, "lng": 88.9007, "cost": 100},
+                    {"name": "Darjeeling Himalayan Toy Train", "lat": 27.0410, "lng": 88.2663, "cost": 300},
+                    {"name": "Tiger Hill Darjeeling Sunrise", "lat": 26.9950, "lng": 88.2847, "cost": 0},
+                    {"name": "Howrah Bridge Landmark", "lat": 22.5851, "lng": 88.3468, "cost": 0},
+                    {"name": "Kalimpong Hill Station", "lat": 27.0594, "lng": 88.4695, "cost": 0},
+                    {"name": "Digha Sea Beach", "lat": 21.6266, "lng": 87.5074, "cost": 0},
+                    {"name": "Shantiniketan Tagore Ashram", "lat": 23.6778, "lng": 87.6837, "cost": 10},
+                    {"name": "Bishnupur Terracotta Temples", "lat": 23.0768, "lng": 87.3197, "cost": 25},
+                    {"name": "Cooch Behar Palace", "lat": 26.3242, "lng": 89.4477, "cost": 20}
+                ],
+                "stays": [{"name": "Darjeeling Tea Estate Villa", "price": 2300}],
+                "vendors": [{"name": "Terracotta Craft Emporium", "type": "Handicraft", "phone": "+91 98765 43221"}]
+            }
+        };
+
+        let map = null;
+        let markersGroup = null;
+        let bookingsCount = 0;
+        let activeBookings = [];
+        let isLoggedIn = true;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-blue-600');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            const activeNav = document.getElementById('nav-' + tabName);
+            activeNav.classList.remove('text-slate-400');
+            activeNav.classList.add('text-blue-600');
+
+            if(tabName === 'explore') {
+                renderExploreSection();
+            }
+        }
+
+        function setCategoryQuick(cat) {
+            document.getElementById('category').value = cat;
+            generatePlan();
+        }
+
+        function initMap(lat, lng) {
+            if (!map) {
+                map = L.map('map').setView([lat, lng], 10);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                markersGroup = L.layerGroup().addTo(map);
+            } else {
+                map.setView([lat, lng], 10);
+                markersGroup.clearLayers();
+            }
+        }
+
+        function generatePlan() {
+            const stateKey = document.getElementById('state_select').value;
+            const selectedData = STATES_DATA[stateKey] || STATES_DATA['up_jhansi'];
+            const places = selectedData.places;
+
+            document.getElementById('output').classList.remove('hidden');
+            document.getElementById('res-safety').innerText = selectedData.safety;
+            document.getElementById('res-places-count').innerText = places.length + " Places";
+            document.getElementById('res-budget').innerText = "₹" + (selectedData.stays[0].price + 400);
+
+            setTimeout(() => {
+                initMap(selectedData.center[0], selectedData.center[1]);
+                const itineraryContainer = document.getElementById('itinerary-container');
+                itineraryContainer.innerHTML = '';
+
+                places.forEach((p, idx) => {
+                    L.marker([p.lat, p.lng]).addTo(markersGroup).bindPopup(p.name);
+                    itineraryContainer.innerHTML += `
+                        <div class="bg-white p-3 rounded-2xl border border-gray-200 shadow-sm flex justify-between items-center text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 bg-blue-100 text-blue-600 font-bold rounded-lg flex items-center justify-center text-[11px]">${idx+1}</span>
+                                <span class="font-bold text-slate-800">${p.name}</span>
+                            </div>
+                            <span class="text-emerald-600 font-bold">${p.cost === 0 ? 'Free' : '₹' + p.cost}</span>
+                        </div>
+                    `;
+                });
+
+                // Update Trips Tab
+                document.getElementById('trips-container').innerHTML = `
+                    <div class="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm space-y-2">
+                        <span class="text-[10px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">ACTIVE ITINERARY</span>
+                        <h4 class="font-bold text-xs text-slate-900">${selectedData.name} Tour Plan</h4>
+                        <p class="text-[11px] text-slate-500">${places.length} Local Spots Included • ${selectedData.safety} Safety Score</p>
+                    </div>
+                `;
+
+                // Stays list
+                const staysContainer = document.getElementById('stays-list');
+                staysContainer.innerHTML = '';
+                selectedData.stays.forEach(s => {
+                    staysContainer.innerHTML += `
+                        <div class="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-sm flex justify-between items-center">
+                            <div>
+                                <h5 class="font-bold text-xs text-slate-900">${s.name}</h5>
+                                <span class="text-[10px] text-emerald-600">Verified SIH Stay</span>
+                            </div>
+                            <button onclick="bookStay('${s.name}', ${s.price})" class="text-[10px] bg-blue-600 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm">Book Now ₹${s.price}</button>
+                        </div>
+                    `;
+                });
+
+                // Vendors list
+                const vendorsContainer = document.getElementById('vendors-list');
+                vendorsContainer.innerHTML = '';
+                selectedData.vendors.forEach(v => {
+                    vendorsContainer.innerHTML += `
+                        <div class="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-sm flex justify-between items-center">
+                            <div>
+                                <h5 class="font-bold text-xs text-slate-900">${v.name}</h5>
+                                <span class="text-[10px] text-slate-500">${v.type}</span>
+                            </div>
+                            <button onclick="openVendorModal('${v.name}', '${v.type}', '${v.phone}')" class="text-[10px] bg-amber-500 text-white font-semibold px-2.5 py-1.5 rounded-lg">Contact Demo</button>
+                        </div>
+                    `;
+                });
+
+                map.invalidateSize();
+            }, 200);
+        }
+
+        function renderExploreSection() {
+            setTimeout(() => {
+                let exploreMap = L.map('explore-map').setView([23.2599, 77.4126], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(exploreMap);
+
+                const exploreList = document.getElementById('explore-places-list');
+                exploreList.innerHTML = '';
+
+                let count = 0;
+                Object.keys(STATES_DATA).forEach(stKey => {
+                    const st = STATES_DATA[stKey];
+                    st.places.forEach(p => {
+                        count++;
+                        if(count <= 15) { // Show top spots on map pin
+                            L.marker([p.lat, p.lng]).addTo(exploreMap).bindPopup(`${p.name} (${st.name})`);
+                        }
+                        exploreList.innerHTML += `
+                            <div class="p-3 border border-gray-200 rounded-xl bg-white shadow-sm flex justify-between items-center">
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-800">${p.name}</h4>
+                                    <p class="text-[10px] text-slate-500">${st.name}</p>
+                                </div>
+                                <span class="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-1 rounded-md">${p.cost === 0 ? 'Free' : '₹' + p.cost}</span>
+                            </div>
+                        `;
+                    });
+                });
+                exploreMap.invalidateSize();
+            }, 200);
+        }
+
+        function bookStay(hotelName, price) {
+            bookingsCount++;
+            activeBookings.push({ name: hotelName, price: price });
+            alert(`✅ Booking Confirmed for ${hotelName}! Saved in Bookings Tab.`);
+
+            const container = document.getElementById('bookings-container');
+            container.innerHTML = `<h4 class="text-xs font-bold text-slate-500 mb-2">${bookingsCount} Active Booking(s)</h4>`;
+
+            activeBookings.forEach(b => {
+                container.innerHTML += `
+                    <div class="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm flex justify-between items-center">
+                        <div>
+                            <span class="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">CONFIRMED</span>
+                            <h4 class="font-bold text-xs text-slate-900 mt-1">${b.name}</h4>
+                            <p class="text-[10px] text-slate-400">Check-in: Tomorrow 12:00 PM</p>
+                        </div>
+                        <span class="text-xs font-bold text-blue-600">₹${b.price}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function openVendorModal(name, type, phone) {
+            document.getElementById('modal-vendor-name').innerText = name;
+            document.getElementById('modal-vendor-type').innerText = type;
+            document.getElementById('modal-vendor-phone').innerText = phone;
+            document.getElementById('modal-call-btn').href = "tel:" + phone;
+            document.getElementById('vendor-modal').classList.remove('hidden');
+        }
+
+        function closeVendorModal() {
+            document.getElementById('vendor-modal').classList.add('hidden');
+        }
+
+        function changeLanguage(langCode) {
+            const langNames = {
+                'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'bn': 'Bengali', 
+                'ta': 'Tamil', 'te': 'Telugu', 'gu': 'Gujarati', 'pa': 'Punjabi', 'kn': 'Kannada'
+            };
+            alert(`🌐 App Language switched to: ${langNames[langCode]}`);
+        }
+
+        function handleLogout() {
+            if (confirm("Are you sure you want to log out?")) {
+                isLoggedIn = false;
+                document.getElementById('profile-card').innerHTML = `
+                    <div class="w-16 h-16 bg-gray-300 text-slate-600 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-2">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-900">Logged Out</h3>
+                    <p class="text-[11px] text-slate-500">Please log in again to access personalized travel profiles.</p>
+                    <button onclick="location.reload()" class="mt-2 text-xs bg-blue-600 text-white font-bold px-4 py-2 rounded-xl">Log In Again</button>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
