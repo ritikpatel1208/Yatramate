@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeGems - Hidden Gems & Safe Tourism Platform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gem: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d'
+                        },
+                        accent: '#38bdf8'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* Custom Scrollbars and Leaflet style overrides */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .leaflet-popup-content-wrapper {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border-radius: 0.75rem !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+            border: 1px solid #334155;
+        }
+        .leaflet-popup-tip {
+            background-color: #1e293b !important;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-x-hidden">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800 px-4 lg:px-8 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('explore')">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <i class="fa-solid fa-compass text-slate-950 text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400">SafeGems</h1>
+                <p class="text-xs text-slate-400 hidden sm:block">SIH Prototype • Hidden Gems & Transparent Safe Routing</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="hidden md:flex items-center gap-1 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800/80">
+            <button onclick="switchTab('explore')" id="nav-explore" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-emerald-400 bg-slate-800/80 flex items-center gap-2">
+                <i class="fa-solid fa-map-location-dot"></i> Explore & Map
+            </button>
+            <button onclick="switchTab('planner')" id="nav-planner" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-route"></i> Route Safety Planner
+            </button>
+            <button onclick="switchTab('reports')" id="nav-reports" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved"></i> Community Alerts
+            </button>
+            <button onclick="switchTab('roadmap')" id="nav-roadmap" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap"></i> SIH Roadmap
+            </button>
+        </nav>
+
+        <!-- Right Quick Actions -->
+        <div class="flex items-center gap-2">
+            <button onclick="openAddSpotModal()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-semibold px-3 py-2 rounded-xl transition-all shadow-md shadow-emerald-900/30 flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Suggest Place</span>
+            </button>
+            <button onclick="openBookmarksModal()" class="relative p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                <i class="fa-solid fa-bookmark"></i>
+                <span id="saved-count-badge" class="absolute -top-1 -right-1 bg-emerald-500 text-slate-950 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center hidden">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Nav Bar -->
+    <div class="md:hidden flex border-b border-slate-800 bg-slate-950 text-xs divide-x divide-slate-800">
+        <button onclick="switchTab('explore')" id="mobile-nav-explore" class="flex-1 py-2 text-center text-emerald-400 font-medium">
+            <i class="fa-solid fa-map-location-dot block text-sm mb-0.5"></i> Explore
+        </button>
+        <button onclick="switchTab('planner')" id="mobile-nav-planner" class="flex-1 py-2 text-center text-slate-400 font-medium">
+            <i class="fa-solid fa-route block text-sm mb-0.5"></i> Routes
+        </button>
+        <button onclick="switchTab('reports')" id="mobile-nav-reports" class="flex-1 py-2 text-center text-slate-400 font-medium">
+            <i class="fa-solid fa-shield-halved block text-sm mb-0.5"></i> Alerts
+        </button>
+        <button onclick="switchTab('roadmap')" id="mobile-nav-roadmap" class="flex-1 py-2 text-center text-slate-400 font-medium">
+            <i class="fa-solid fa-graduation-cap block text-sm mb-0.5"></i> Roadmap
+        </button>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+
+        <!-- TAB 1: EXPLORE & MAP INTERFACE -->
+        <div id="tab-explore" class="tab-content flex-1 flex flex-col lg:flex-row h-full overflow-hidden">
+            
+            <!-- Left Filtering & Gems List Panel -->
+            <div class="w-full lg:w-[480px] xl:w-[520px] flex flex-col border-r border-slate-800 bg-slate-900/90 z-10 flex-shrink-0 h-full overflow-hidden">
+                
+                <!-- Filter Accordion / Header Controls -->
+                <div class="p-4 border-b border-slate-800 bg-slate-950/40 space-y-3">
+                    
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500"></i>
+                        <input type="text" id="search-input" placeholder="Search hidden fort, waterfall, ancient village..." 
+                            class="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700/80 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors">
+                    </div>
+
+                    <!-- Filter Preferences Grill -->
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <label class="block text-slate-400 text-[11px] font-medium mb-1">Category / Experience</label>
+                            <select id="filter-category" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="all">All Categories</option>
+                                <option value="heritage">Heritage & Architecture</option>
+                                <option value="nature">Nature & Lakes</option>
+                                <option value="offbeat">Offbeat & Scenic</option>
+                                <option value="adventure">Adventure & Trails</option>
+                                <option value="spiritual">Spiritual & Quiet</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 text-[11px] font-medium mb-1">Max Budget: <span id="budget-val" class="text-emerald-400 font-bold">₹2500</span></label>
+                            <input type="range" id="filter-budget" min="0" max="5000" step="250" value="2500" class="w-full accent-emerald-500 cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 text-[11px] font-medium mb-1">Crowd Level</label>
+                            <select id="filter-crowd" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="all">Any Crowd Level</option>
+                                <option value="Quiet">Quiet / Very Low</option>
+                                <option value="Moderate">Moderate</option>
+                                <option value="High">Popular</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 text-[11px] font-medium mb-1">Travel Time</label>
+                            <select id="filter-tod" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="all">Any Time</option>
+                                <option value="Day">Daylight Safe</option>
+                                <option value="Evening">Evening Recommended</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Quick Filter Tags & Reset -->
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                            <span onclick="toggleQuickTag('verified')" id="tag-verified" class="cursor-pointer px-2.5 py-1 rounded-full border border-slate-700 bg-slate-800 text-slate-400 hover:border-emerald-500/50 transition-colors whitespace-nowrap">
+                                <i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Verified Only
+                            </span>
+                            <span onclick="toggleQuickTag('high-safety')" id="tag-high-safety" class="cursor-pointer px-2.5 py-1 rounded-full border border-slate-700 bg-slate-800 text-slate-400 hover:border-emerald-500/50 transition-colors whitespace-nowrap">
+                                <i class="fa-solid fa-shield text-sky-400 mr-1"></i> Safety 85%+
+                            </span>
+                        </div>
+                        <button onclick="resetFilters()" class="text-xs text-slate-400 hover:text-emerald-400 underline whitespace-nowrap ml-2">Reset</button>
+                    </div>
+
+                </div>
+
+                <!-- Active Count Indicator -->
+                <div class="px-4 py-2 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <span>Showing <strong id="results-count" class="text-slate-200">0</strong> curated hidden gems</span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-sort-amount-down text-emerald-400"></i> Rank: Score + Safety</span>
+                </div>
+
+                <!-- Gems List Container -->
+                <div id="gems-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <!-- Cards populated via JS -->
+                </div>
+            </div>
+
+            <!-- Right Interactive Map View -->
+            <div class="flex-1 h-[300px] lg:h-full relative">
+                <div id="map" class="w-full h-full z-0"></div>
+
+                <!-- Floating Map Controls / Legend -->
+                <div class="absolute bottom-4 left-4 z-[20] glass-panel p-3 rounded-xl max-w-xs text-xs space-y-1.5 border border-slate-700/60 shadow-xl hidden sm:block">
+                    <p class="font-bold text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-layer-group text-emerald-400"></i> Map Safety Indicators
+                    </p>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span> High Safety (&gt;80)
+                        <span class="w-3 h-3 rounded-full bg-amber-500 ml-2"></span> Moderate Safety (65-80)
+                        <span class="w-3 h-3 rounded-full bg-rose-500 ml-2"></span> Extreme Caution (&lt;65)
+                    </div>
+                </div>
+
+                <!-- Recenter Map Button -->
+                <button onclick="resetMapView()" class="absolute top-4 right-4 z-[20] glass-panel hover:bg-slate-800 text-slate-200 p-2.5 rounded-xl border border-slate-700/80 shadow-lg text-xs font-semibold flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-compress"></i> Recenter Map
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 2: ROUTE SAFETY PLANNER -->
+        <div id="tab-planner" class="tab-content flex-1 hidden overflow-y-auto p-4 lg:p-8 bg-slate-900">
+            <div class="max-w-5xl mx-auto space-y-6">
+                
+                <!-- Section Header -->
+                <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <span class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+                            Transparent Routing Logic
+                        </span>
+                        <h2 class="text-2xl font-bold text-slate-100 mt-2">Safe Route & Proximity Evaluator</h2>
+                        <p class="text-sm text-slate-400 mt-1 max-w-2xl">
+                            Calculates travel metrics while auditing local safety factors: illuminated highways, police outpost proximity, mobile network coverage, and evening travel advisories.
+                        </p>
+                    </div>
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-emerald-400 text-3xl hidden md:block">
+                        <i class="fa-solid fa-route"></i>
+                    </div>
+                </div>
+
+                <!-- Route Inputs & Simulation Box -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Form Controls -->
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                        <h3 class="font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-emerald-400"></i> Configure Route
+                        </h3>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Starting Origin</label>
+                            <select id="route-origin" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="25.4484,78.5685|Jhansi Railway Station">Jhansi Railway Station, UP</option>
+                                <option value="26.9124,75.7873|Jaipur City Center">Jaipur City Center, Rajasthan</option>
+                                <option value="9.9312,76.2673|Kochi Fort Area">Kochi Fort Area, Kerala</option>
+                                <option value="30.0869,78.2676|Rishikesh Bus Stand">Rishikesh Bus Stand, Uttarakhand</option>
+                                <option value="15.3350,76.4600|Hampi Junction">Hampi Junction, Karnataka</option>
+                                <option value="25.5941,85.1376|Patna Junction">Patna Junction, Bihar</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Destination Gem</label>
+                            <select id="route-destination" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Travel Mode</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="setTravelMode('car')" id="mode-car" class="mode-btn p-2 rounded-xl bg-emerald-500/20 border border-emerald-500 text-emerald-400 text-xs font-medium flex flex-col items-center gap-1">
+                                    <i class="fa-solid fa-car text-base"></i> Car / Taxi
+                                </button>
+                                <button type="button" onclick="setTravelMode('bike')" id="mode-bike" class="mode-btn p-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs font-medium flex flex-col items-center gap-1 hover:border-slate-700">
+                                    <i class="fa-solid fa-motorcycle text-base"></i> Two Wheeler
+                                </button>
+                                <button type="button" onclick="setTravelMode('transit')" id="mode-transit" class="mode-btn p-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs font-medium flex flex-col items-center gap-1 hover:border-slate-700">
+                                    <i class="fa-solid fa-bus text-base"></i> Public Transport
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Departure Time</label>
+                            <select id="route-time" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="day">Daytime (08:00 AM - 05:00 PM)</option>
+                                <option value="sunset">Sunset Hours (05:00 PM - 08:00 PM)</option>
+                                <option value="night">Night Travel (08:00 PM - 05:00 AM)</option>
+                            </select>
+                        </div>
+
+                        <button onclick="calculateRoute()" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-compass"></i> Calculate Safe Route
+                        </button>
+                    </div>
+
+                    <!-- Output Route Audit Details -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <div id="route-results-card" class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-6">
+                            <!-- Route Summary Stats -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-4 border-b border-slate-800">
+                                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                                    <span class="text-[11px] text-slate-400 block mb-0.5">Estimated Distance</span>
+                                    <span id="route-dist" class="text-lg font-bold text-slate-100">-- km</span>
+                                </div>
+                                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                                    <span class="text-[11px] text-slate-400 block mb-0.5">Est. Travel Duration</span>
+                                    <span id="route-time-est" class="text-lg font-bold text-slate-100">-- min</span>
+                                </div>
+                                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                                    <span class="text-[11px] text-slate-400 block mb-0.5">Route Safety Score</span>
+                                    <span id="route-safety-score" class="text-lg font-bold text-emerald-400">-- / 100</span>
+                                </div>
+                                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                                    <span class="text-[11px] text-slate-400 block mb-0.5">Route Type</span>
+                                    <span id="route-type-badge" class="text-sm font-semibold text-sky-400">Paved Highway</span>
+                                </div>
+                            </div>
+
+                            <!-- Route Safety Audit List -->
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                                    <i class="fa-solid fa-clipboard-check text-emerald-400"></i> Route Safety Checkpoints & Factors
+                                </h4>
+                                <div id="route-checkpoints" class="space-y-2 text-xs">
+                                    <p class="text-slate-500 italic">Select origin & destination then press "Calculate Safe Route" to view transparency checklist.</p>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Route Mini-Map Placeholder -->
+                            <div class="h-48 rounded-xl overflow-hidden border border-slate-800 relative bg-slate-950">
+                                <div id="route-map" class="w-full h-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 3: COMMUNITY ALERTS & REPORTS -->
+        <div id="tab-reports" class="tab-content flex-1 hidden overflow-y-auto p-4 lg:p-8 bg-slate-900">
+            <div class="max-w-4xl mx-auto space-y-6">
+                
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-950/80 p-6 rounded-2xl border border-slate-800">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-shield-cat text-amber-400"></i> Community Safety & Crowd Advisories
+                        </h2>
+                        <p class="text-sm text-slate-400 mt-1">
+                            Real-time crowdsourced reports from fellow travelers and verified local guides.
+                        </p>
+                    </div>
+                    <button onclick="openReportModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition-all shadow-md shadow-amber-500/20 flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-bullhorn"></i> Submit Advisory Report
+                    </button>
+                </div>
+
+                <!-- Live Reports List -->
+                <div id="reports-feed" class="space-y-4">
+                    <!-- Populated JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: SIH ROADMAP & ARCHITECTURE (From PDF Document) -->
+        <div id="tab-roadmap" class="tab-content flex-1 hidden overflow-y-auto p-4 lg:p-8 bg-slate-900">
+            <div class="max-w-5xl mx-auto space-y-8">
+                
+                <!-- Roadmap Title -->
+                <div class="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 p-6 rounded-2xl border border-emerald-500/30">
+                    <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest">SIH First-Year Blueprint</span>
+                    <h2 class="text-2xl font-bold text-slate-100 mt-1">12-Week Learning & Implementation Roadmap</h2>
+                    <p class="text-sm text-slate-300 mt-2">
+                        Derived directly from the project guide. Follow this structured roadmap to evolve this prototype into a full production-ready SIH submission.
+                    </p>
+                </div>
+
+                <!-- Core App Flow Steps (PDF Section 2) -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-diagram-project text-teal-400"></i> End-to-End System Workflow
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center mb-2">1</span>
+                            <h4 class="font-bold text-slate-200">User Input</h4>
+                            <p class="text-slate-400 mt-1">Selects budget, place category, travel time & crowd preferences.</p>
+                        </div>
+                        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center mb-2">2</span>
+                            <h4 class="font-bold text-slate-200">Frontend Logic</h4>
+                            <p class="text-slate-400 mt-1">JavaScript filters local JSON database / REST API data.</p>
+                        </div>
+                        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center mb-2">3</span>
+                            <h4 class="font-bold text-slate-200">Score & Rank</h4>
+                            <p class="text-slate-400 mt-1">Gives matching places a score based on safety factors & budget.</p>
+                        </div>
+                        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center mb-2">4</span>
+                            <h4 class="font-bold text-slate-200">Map & Route</h4>
+                            <p class="text-slate-400 mt-1">Leaflet map plots markers and calculates transparent route metrics.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 12-Week Plan Table -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-check text-sky-400"></i> Weekly Progression Schedule
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase font-semibold">
+                                <tr>
+                                    <th class="p-3">Weeks</th>
+                                    <th class="p-3">Topic / Skill</th>
+                                    <th class="p-3">Deliverable / Task</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
+                                <tr><td class="p-3 font-semibold text-emerald-400">Week 1-2</td><td class="p-3">HTML, CSS & Responsive UI</td><td class="p-3">Build mobile-friendly home screen and search layout</td></tr>
+                                <tr><td class="p-3 font-semibold text-emerald-400">Week 3-4</td><td class="p-3">JS Basics & DOM Events</td><td class="p-3">Implement preference form, modal views & client filtering</td></tr>
+                                <tr><td class="p-3 font-semibold text-emerald-400">Week 5-6</td><td class="p-3">JSON & Fetch API</td><td class="p-3">Structure place datasets with tags, budget, and safety metrics</td></tr>
+                                <tr><td class="p-3 font-semibold text-emerald-400">Week 7-8</td><td class="p-3">Leaflet Maps & Routing</td><td class="p-3">Plot lat/lng coordinates and draw routing lines</td></tr>
+                                <tr><td class="p-3 font-semibold text-emerald-400">Week 9-11</td><td class="p-3">Node.js, Express & DB</td><td class="p-3">Build GET /places API, POST /reports and MongoDB persistence</td></tr>
+                                <tr><td class="p-3 font-semibold text-emerald-400">Week 12</td><td class="p-3">Integration & SIH Demo</td><td class="p-3">Transparent safety score presentation and pitch deck</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Team Division Matrix -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+                        <h4 class="font-bold text-slate-200 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-users text-emerald-400"></i> Recommended Team Division
+                        </h4>
+                        <ul class="space-y-2 text-xs text-slate-300">
+                            <li class="flex items-start gap-2"><strong class="text-emerald-400 w-28 shrink-0">Frontend Dev:</strong> HTML/CSS/JS, responsive screens, recommendation UI.</li>
+                            <li class="flex items-start gap-2"><strong class="text-emerald-400 w-28 shrink-0">Backend Dev:</strong> Node/Express APIs, route calculations, database schemas.</li>
+                            <li class="flex items-start gap-2"><strong class="text-emerald-400 w-28 shrink-0">Maps & Data:</strong> Leaflet integration, OSM geocoding, spot verification.</li>
+                            <li class="flex items-start gap-2"><strong class="text-emerald-400 w-28 shrink-0">Research & PPT:</strong> Safety scoring methodology, user surveys, SIH pitch.</li>
+                        </ul>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+                        <h4 class="font-bold text-slate-200 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Golden Rule of SIH Safety Indicators
+                        </h4>
+                        <blockquote class="text-xs text-slate-300 italic leading-relaxed border-l-2 border-amber-500 pl-3 py-1">
+                            "Do not claim an algorithm can prove a route is '100% safe'. Always create a transparent, factor-based score (lighting, emergency proximity, network coverage, verified local input) and clearly explain <strong>'Why this score?'</strong> to the traveler."
+                        </blockquote>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL 1: PLACE DETAIL & TRANSPARENT SAFETY SCORE MODAL -->
+    <div id="modal-detail" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button onclick="closeDetailModal()" class="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-slate-950/80 hover:bg-slate-800 text-slate-300 flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Hero Image Banner -->
+            <div class="h-60 relative">
+                <img id="detail-img" src="" alt="" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-black/30"></div>
+                <div class="absolute bottom-4 left-6 right-6 flex justify-between items-end">
+                    <div>
+                        <span id="detail-category-badge" class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Category</span>
+                        <h2 id="detail-title" class="text-2xl font-bold text-white mt-1">Place Name</h2>
+                        <p id="detail-city" class="text-xs text-slate-300 flex items-center gap-1"><i class="fa-solid fa-location-dot text-rose-400"></i> City, Region</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400 block">Est. Entry/Cost</span>
+                        <span id="detail-cost" class="text-lg font-bold text-emerald-400">₹0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Contents -->
+            <div class="p-6 space-y-6">
+                <!-- Description -->
+                <div>
+                    <h3 class="text-sm font-bold text-slate-200 mb-1">About this Gem</h3>
+                    <p id="detail-desc" class="text-xs text-slate-300 leading-relaxed">Description goes here...</p>
+                </div>
+
+                <!-- Quick Attributes Grill -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-slate-500 block">Crowd Density</span>
+                        <span id="detail-crowd" class="font-bold text-slate-200">Quiet</span>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-slate-500 block">Best Visit Time</span>
+                        <span id="detail-besttime" class="font-bold text-slate-200">08:00 AM - 05:00 PM</span>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-slate-500 block">Verification</span>
+                        <span id="detail-verified" class="font-bold text-emerald-400"><i class="fa-solid fa-circle-check"></i> Verified</span>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-slate-500 block">Network Coverage</span>
+                        <span id="detail-network" class="font-bold text-sky-400">4G Available</span>
+                    </div>
+                </div>
+
+                <!-- TRANSPARENT SAFETY FACTOR BREAKDOWN -->
+                <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                                <i class="fa-solid fa-shield-halved text-emerald-400"></i> Safety Index Audit: <span id="detail-safety-score" class="text-emerald-400">88/100</span>
+                            </h4>
+                            <p class="text-[11px] text-slate-400">Why this score? Transparent factor audit breakdown:</p>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">SIH Rule Compliant</span>
+                    </div>
+
+                    <div id="detail-safety-factors" class="space-y-2 text-xs">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center justify-between pt-2 gap-3">
+                    <button id="detail-save-btn" onclick="" class="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-bookmark"></i> Save Gem
+                    </button>
+                    <button id="detail-route-btn" onclick="" class="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-diamond-turn-right"></i> Calculate Route to this Place
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SUGGEST A NEW HIDDEN GEM -->
+    <div id="modal-add-spot" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <button onclick="closeAddSpotModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-plus-circle text-emerald-400"></i> Suggest a Hidden Gem
+            </h3>
+            <p class="text-xs text-slate-400">Submitted places are reviewed by local tourist moderators.</p>
+
+            <form id="add-spot-form" onsubmit="handleAddSpot(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-300 mb-1">Place Name *</label>
+                    <input type="text" id="add-name" required placeholder="e.g. Orchha Sunset Cenotaphs" class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-300 mb-1">Nearest City *</label>
+                        <input type="text" id="add-city" required placeholder="e.g. Jhansi" class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">Category</label>
+                        <select id="add-category" class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200">
+                            <option value="heritage">Heritage</option>
+                            <option value="nature">Nature</option>
+                            <option value="offbeat">Offbeat</option>
+                            <option value="adventure">Adventure</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-300 mb-1">Latitude</label>
+                        <input type="number" step="any" id="add-lat" required placeholder="25.35" class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">Longitude</label>
+                        <input type="number" step="any" id="add-lng" required placeholder="78.64" class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-300 mb-1">Description</label>
+                    <textarea id="add-desc" rows="2" placeholder="Briefly describe what makes this place special..." class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all">Submit Suggestion</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: REPORT ADVISORY -->
+    <div id="modal-report" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <button onclick="closeReportModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Submit Advisory / Report
+            </h3>
+            <p class="text-xs text-slate-400">Report sudden crowd spikes, road closures, or lighting issues.</p>
+
+            <form id="report-form" onsubmit="handleReportSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-300 mb-1">Target Gem / Location *</label>
+                    <select id="report-place" class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200">
+                        <!-- Populated JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-300 mb-1">Report Type</label>
+                    <select id="report-type" class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200">
+                        <option value="crowd">Sudden High Crowd</option>
+                        <option value="lighting">Poor Street Lighting</option>
+                        <option value="road">Road Maintenance / Detour</option>
+                        <option value="safety">General Safety Note</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-300 mb-1">Details / Advice</label>
+                    <textarea id="report-msg" required rows="3" placeholder="Describe the current condition..." class="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-all">Broadcast Advisory</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: SAVED BOOKMARKS -->
+    <div id="modal-bookmarks" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative max-h-[80vh] flex flex-col">
+            <button onclick="closeBookmarksModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-bookmark text-emerald-400"></i> Saved Hidden Gems
+            </h3>
+            <div id="bookmarks-container" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                <p class="text-xs text-slate-500 italic">No saved gems yet. Click the bookmark icon on any card!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // ==========================================
+        // DATASET: Curated Indian Hidden Gems
+        // ==========================================
+        const initialPlaces = [
+            {
+                id: 'gem-1',
+                name: 'Jhansi Fort (Rani Mahal Side)',
+                city: 'Jhansi',
+                state: 'Uttar Pradesh',
+                lat: 25.4570,
+                lng: 78.5780,
+                category: 'heritage',
+                budget: 150,
+                crowd: 'Quiet',
+                timeOfDay: 'Day',
+                bestTime: '09:00 AM - 05:00 PM',
+                verified: true,
+                rating: 4.8,
+                safetyScore: 92,
+                network: '4G Strong',
+                policeProximity: '0.8 km (Jhansi Kotwali)',
+                lighting: 'Well illuminated till 07 PM',
+                img: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=800&q=80',
+                description: 'Lesser visited quiet heritage ramparts of Jhansi Fort away from the main gate, offering peaceful sunset viewpoints and historic architecture.',
+                tags: ['quiet', 'heritage', 'architecture']
+            },
+            {
+                id: 'gem-2',
+                name: 'Orchha Chhatris & Betwa River Bed',
+                city: 'Orchha',
+                state: 'Madhya Pradesh',
+                lat: 25.3510,
+                lng: 78.6430,
+                category: 'heritage',
+                budget: 200,
+                crowd: 'Moderate',
+                timeOfDay: 'Evening',
+                bestTime: '04:00 PM - 07:00 PM',
+                verified: true,
+                rating: 4.9,
+                safetyScore: 88,
+                network: '4G Good',
+                policeProximity: '1.2 km (Orchha Station)',
+                lighting: 'Moderate riverside lighting',
+                img: 'https://images.unsplash.com/photo-1627894483216-2138af692e32?auto=format&fit=crop&w=800&q=80',
+                description: '14 magnificent cenotaphs along the quiet banks of Betwa river. A peaceful offbeat alternative to congested commercial monuments.',
+                tags: ['nature', 'heritage', 'river']
+            },
+            {
+                id: 'gem-3',
+                name: 'Amer Stepwell (Panna Meena)',
+                city: 'Jaipur',
+                state: 'Rajasthan',
+                lat: 26.9850,
+                lng: 75.8510,
+                category: 'offbeat',
+                budget: 100,
+                crowd: 'Quiet',
+                timeOfDay: 'Day',
+                bestTime: '07:00 AM - 11:00 AM',
+                verified: true,
+                rating: 4.7,
+                safetyScore: 85,
+                network: '4G Strong',
+                policeProximity: '1.5 km (Amer Thana)',
+                lighting: 'Good daylight',
+                img: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=800&q=80',
+                description: 'An intricate geometric stepwell hidden right behind Amber Palace. Far less crowded with tranquil stone symmetrical stairs.',
+                tags: ['photography', 'offbeat', 'architecture']
+            },
+            {
+                id: 'gem-4',
+                name: 'Shettihalli Rosary Church Ruins',
+                city: 'Hassan',
+                state: 'Karnataka',
+                lat: 13.0031,
+                lng: 76.0125,
+                category: 'offbeat',
+                budget: 300,
+                crowd: 'Quiet',
+                timeOfDay: 'Day',
+                bestTime: '08:00 AM - 04:00 PM',
+                verified: true,
+                rating: 4.6,
+                safetyScore: 78,
+                network: '3G Moderate',
+                policeProximity: '4.0 km',
+                lighting: 'Natural daylight only',
+                img: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80',
+                description: '19th century Gothic church ruin that gets partially submerged during monsoon backwaters. Eerie yet magnificent atmosphere.',
+                tags: ['submerged', 'ruins', 'gothic']
+            },
+            {
+                id: 'gem-5',
+                name: 'Gandikota Grand Canyon Viewpoint',
+                city: 'Kadapa',
+                state: 'Andhra Pradesh',
+                lat: 14.8150,
+                lng: 78.2860,
+                category: 'adventure',
+                budget: 500,
+                crowd: 'Quiet',
+                timeOfDay: 'Day',
+                bestTime: '06:00 AM - 06:00 PM',
+                verified: true,
+                rating: 4.9,
+                safetyScore: 81,
+                network: '4G Limited',
+                policeProximity: '3.2 km',
+                lighting: 'Daylight only',
+                img: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
+                description: 'Stunning gorge formed by the Penna river cut through Erramala hills. Often hailed as the Grand Canyon of India.',
+                tags: ['gorge', 'trekking', 'canyon']
+            },
+            {
+                id: 'gem-6',
+                name: 'Mawlynnong Secret Living Root Bridge',
+                city: 'Shillong',
+                state: 'Meghalaya',
+                lat: 25.2010,
+                lng: 91.9160,
+                category: 'nature',
+                budget: 400,
+                crowd: 'Quiet',
+                timeOfDay: 'Day',
+                bestTime: '08:00 AM - 04:30 PM',
+                verified: true,
+                rating: 4.8,
+                safetyScore: 90,
+                network: '4G Good',
+                policeProximity: '2.0 km',
+                lighting: 'Shaded canopy',
+                img: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80',
+                description: 'A quieter bio-engineering marvel crafted by indigenous Khasi tribes using living Ficus tree roots.',
+                tags: ['nature', 'eco', 'bridges']
+            }
+        ];
+
+        // Sample initial community reports
+        const initialReports = [
+            {
+                id: 'rep-1',
+                placeName: 'Orchha Chhatris & Betwa River Bed',
+                type: 'crowd',
+                msg: 'Sunset river view has light local photography crowds between 5:30 PM - 6:30 PM. Very safe and well lit.',
+                time: '15 mins ago',
+                user: 'Guide Rajesh'
+            },
+            {
+                id: 'rep-2',
+                placeName: 'Shettihalli Rosary Church Ruins',
+                type: 'lighting',
+                msg: 'No streetlights on the final 1.5km approach dirt road. Recommend returning before 5:30 PM.',
+                time: '1 hour ago',
+                user: 'Solo Traveler Priya'
+            }
+        ];
+
+        // APP STATE
+        let places = [...initialPlaces];
+        let reports = [...initialReports];
+        let savedGemIds = JSON.parse(localStorage.getItem('safegems_saved') || '[]');
+        let currentTab = 'explore';
+        let map = null;
+        let routeMap = null;
+        let markersGroup = null;
+        let routePolyline = null;
+        let travelMode = 'car';
+        let activeQuickTags = [];
+
+        // ==========================================
+        // MAIN INITIALIZATION
+        // ==========================================
+        window.addEventListener('load', () => {
+            initLeafletMap();
+            populateDestinationDropdown();
+            renderGemsList();
+            renderReportsFeed();
+            updateSavedBadge();
+            setupFilterListeners();
+        });
+
+        // Initialize Primary Interactive Leaflet Map
+        function initLeafletMap() {
+            if (map) return;
+
+            map = L.map('map', {
+                zoomControl: false
+            }).setView([22.5937, 78.9629], 5); // India Centered
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            markersGroup = L.layerGroup().addTo(map);
+            plotMarkersOnMap(places);
+        }
+
+        // Plot Markers with dynamic color coding based on safety score
+        function plotMarkersOnMap(items) {
+            if (!markersGroup) return;
+            markersGroup.clearLayers();
+
+            const bounds = [];
+
+            items.forEach(gem => {
+                let colorClass = 'bg-emerald-500 border-emerald-300';
+                if (gem.safetyScore < 65) colorClass = 'bg-rose-500 border-rose-300';
+                else if (gem.safetyScore <= 80) colorClass = 'bg-amber-500 border-amber-300';
+
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div class="w-7 h-7 rounded-full ${colorClass} border-2 shadow-lg flex items-center justify-center text-slate-950 text-xs font-extrabold transform hover:scale-125 transition-transform"><i class="fa-solid fa-gem"></i></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+
+                const marker = L.marker([gem.lat, gem.lng], { icon: customIcon }).addTo(markersGroup);
+
+                const popupHtml = `
+                    <div class="p-1 space-y-2 max-w-[200px]">
+                        <img src="${gem.img}" class="w-full h-24 object-cover rounded-lg">
+                        <div>
+                            <span class="text-[10px] text-emerald-400 font-semibold uppercase">${gem.category}</span>
+                            <h4 class="font-bold text-sm text-white leading-tight">${gem.name}</h4>
+                            <p class="text-[11px] text-slate-300 mt-0.5"><i class="fa-solid fa-location-dot text-rose-400"></i> ${gem.city}</p>
+                        </div>
+                        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-700">
+                            <span class="text-emerald-400 font-bold">₹${gem.budget}</span>
+                            <span class="text-xs font-semibold text-slate-300">Safety ${gem.safetyScore}%</span>
+                        </div>
+                        <button onclick="openDetailModal('${gem.id}')" class="w-full py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors">
+                            View Details
+                        </button>
+                    </div>
+                `;
+
+                marker.bindPopup(popupHtml);
+                bounds.push([gem.lat, gem.lng]);
+            });
+
+            if (bounds.length > 0 && items.length === places.length) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        // ==========================================
+        // FILTERING & RECOMMENDATION LOGIC
+        // ==========================================
+        function setupFilterListeners() {
+            document.getElementById('search-input').addEventListener('input', applyFilters);
+            document.getElementById('filter-category').addEventListener('change', applyFilters);
+            document.getElementById('filter-budget').addEventListener('input', (e) => {
+                document.getElementById('budget-val').innerText = '₹' + e.target.value;
+                applyFilters();
+            });
+            document.getElementById('filter-crowd').addEventListener('change', applyFilters);
+            document.getElementById('filter-tod').addEventListener('change', applyFilters);
+        }
+
+        function toggleQuickTag(tag) {
+            const el = document.getElementById(`tag-${tag}`);
+            if (activeQuickTags.includes(tag)) {
+                activeQuickTags = activeQuickTags.filter(t => t !== tag);
+                el.classList.remove('border-emerald-500', 'bg-emerald-500/20', 'text-emerald-400');
+                el.classList.add('border-slate-700', 'bg-slate-800', 'text-slate-400');
+            } else {
+                activeQuickTags.push(tag);
+                el.classList.add('border-emerald-500', 'bg-emerald-500/20', 'text-emerald-400');
+                el.classList.remove('border-slate-700', 'bg-slate-800', 'text-slate-400');
+            }
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            const cat = document.getElementById('filter-category').value;
+            const maxBudget = parseInt(document.getElementById('filter-budget').value, 10);
+            const crowd = document.getElementById('filter-crowd').value;
+            const tod = document.getElementById('filter-tod').value;
+
+            const filtered = places.filter(gem => {
+                const matchesSearch = gem.name.toLowerCase().includes(query) || 
+                                      gem.city.toLowerCase().includes(query) || 
+                                      gem.tags.some(t => t.toLowerCase().includes(query));
+                const matchesCat = (cat === 'all' || gem.category === cat);
+                const matchesBudget = (gem.budget <= maxBudget);
+                const matchesCrowd = (crowd === 'all' || gem.crowd === crowd);
+                const matchesTod = (tod === 'all' || gem.timeOfDay === tod);
+                const matchesVerified = !activeQuickTags.includes('verified') || gem.verified;
+                const matchesSafety = !activeQuickTags.includes('high-safety') || gem.safetyScore >= 85;
+
+                return matchesSearch && matchesCat && matchesBudget && matchesCrowd && matchesTod && matchesVerified && matchesSafety;
+            });
+
+            // Sort by Recommendation Score (Combination of rating and safety score)
+            filtered.sort((a, b) => (b.safetyScore * 0.6 + b.rating * 10) - (a.safetyScore * 0.6 + a.rating * 10));
+
+            renderGemsList(filtered);
+            plotMarkersOnMap(filtered);
+        }
+
+        function resetFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-category').value = 'all';
+            document.getElementById('filter-budget').value = '2500';
+            document.getElementById('budget-val').innerText = '₹2500';
+            document.getElementById('filter-crowd').value = 'all';
+            document.getElementById('filter-tod').value = 'all';
+            activeQuickTags = [];
+            ['verified', 'high-safety'].forEach(tag => {
+                const el = document.getElementById(`tag-${tag}`);
+                el.classList.remove('border-emerald-500', 'bg-emerald-500/20', 'text-emerald-400');
+                el.classList.add('border-slate-700', 'bg-slate-800', 'text-slate-400');
+            });
+            applyFilters();
+        }
+
+        // Render Gem Cards in Left List
+        function renderGemsList(items = places) {
+            const container = document.getElementById('gems-list');
+            document.getElementById('results-count').innerText = items.length;
+
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 px-4 space-y-3">
+                        <i class="fa-solid fa-compass-slash text-4xl text-slate-600"></i>
+                        <p class="text-sm font-semibold text-slate-300">No hidden gems match your exact filters</p>
+                        <p class="text-xs text-slate-500">Try adjusting your budget slider or choosing "All Categories".</p>
+                        <button onclick="resetFilters()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold rounded-xl border border-slate-700">
+                            Reset Filters
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = items.map(gem => {
+                const isSaved = savedGemIds.includes(gem.id);
+                return `
+                    <div class="glass-panel p-3.5 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all duration-200 group flex gap-3.5 relative">
+                        <div class="w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 relative">
+                            <img src="${gem.img}" alt="${gem.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                            <span class="absolute top-1.5 left-1.5 bg-slate-950/80 backdrop-blur-md px-1.5 py-0.5 rounded text-[10px] font-bold text-emerald-400 border border-slate-700/60">
+                                ₹${gem.budget}
+                            </span>
+                        </div>
+
+                        <div class="flex-1 flex flex-col justify-between min-w-0">
+                            <div>
+                                <div class="flex items-center justify-between gap-1">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">${gem.category}</span>
+                                    <button onclick="toggleSaveGem(event, '${gem.id}')" class="text-xs text-slate-400 hover:text-emerald-400 p-1">
+                                        <i class="fa-${isSaved ? 'solid text-emerald-400' : 'regular'} fa-bookmark"></i>
+                                    </button>
+                                </div>
+                                <h3 onclick="openDetailModal('${gem.id}')" class="font-bold text-sm text-slate-100 hover:text-emerald-300 cursor-pointer truncate mt-0.5">
+                                    ${gem.name}
+                                </h3>
+                                <p class="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                    <i class="fa-solid fa-location-dot text-rose-400 text-[10px]"></i> ${gem.city}, ${gem.state}
+                                </p>
+                            </div>
+
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+                                <span class="text-slate-400 flex items-center gap-1">
+                                    <i class="fa-solid fa-star text-amber-400 text-[11px]"></i> ${gem.rating}
+                                </span>
+                                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[11px]">
+                                    Safety ${gem.safetyScore}%
+                                </span>
+                                <button onclick="focusMapOnGem('${gem.id}')" class="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1">
+                                    Map <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function focusMapOnGem(id) {
+            const gem = places.find(p => p.id === id);
+            if (!gem || !map) return;
+            map.flyTo([gem.lat, gem.lng], 12, { duration: 1.5 });
+            if (window.innerWidth < 1024) {
+                // Scroll down to map on mobile
+                document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function resetMapView() {
+            if (!map) return;
+            const bounds = places.map(p => [p.lat, p.lng]);
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        // ==========================================
+        // MODAL DETAILED VIEW & TRANSPARENT SAFETY
+        // ==========================================
+        function openDetailModal(id) {
+            const gem = places.find(p => p.id === id);
+            if (!gem) return;
+
+            document.getElementById('detail-img').src = gem.img;
+            document.getElementById('detail-title').innerText = gem.name;
+            document.getElementById('detail-city').innerHTML = `<i class="fa-solid fa-location-dot text-rose-400"></i> ${gem.city}, ${gem.state}`;
+            document.getElementById('detail-category-badge').innerText = gem.category;
+            document.getElementById('detail-cost').innerText = `₹${gem.budget}`;
+            document.getElementById('detail-desc').innerText = gem.description;
+            document.getElementById('detail-crowd').innerText = gem.crowd;
+            document.getElementById('detail-besttime').innerText = gem.bestTime;
+            document.getElementById('detail-network').innerText = gem.network;
+            document.getElementById('detail-verified').innerHTML = gem.verified ? 
+                '<i class="fa-solid fa-circle-check text-emerald-400"></i> Verified Spot' : 
+                '<i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Pending Local Verification';
+            document.getElementById('detail-safety-score').innerText = `${gem.safetyScore}/100`;
+
+            // TRANSPARENT SAFETY FACTORS AUDIT (Per PDF Rule Section 9)
+            const factorsContainer = document.getElementById('detail-safety-factors');
+            factorsContainer.innerHTML = `
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="text-slate-300 flex items-center gap-2"><i class="fa-solid fa-building-shield text-sky-400"></i> Nearby Emergency Services</span>
+                    <span class="font-bold text-slate-200">${gem.policeProximity}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="text-slate-300 flex items-center gap-2"><i class="fa-solid fa-lightbulb text-amber-400"></i> Approach Lighting</span>
+                    <span class="font-bold text-slate-200">${gem.lighting}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="text-slate-300 flex items-center gap-2"><i class="fa-solid fa-signal text-emerald-400"></i> Mobile Connectivity</span>
+                    <span class="font-bold text-slate-200">${gem.network}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="text-slate-300 flex items-center gap-2"><i class="fa-solid fa-users text-purple-400"></i> Density & Isolation Risk</span>
+                    <span class="font-bold text-slate-200">${gem.crowd === 'Quiet' ? 'Low Crowd / High Isolation' : 'Balanced Tourist Flow'}</span>
+                </div>
+            `;
+
+            const saveBtn = document.getElementById('detail-save-btn');
+            const isSaved = savedGemIds.includes(gem.id);
+            saveBtn.innerHTML = `<i class="fa-${isSaved ? 'solid text-emerald-400' : 'regular'} fa-bookmark"></i> ${isSaved ? 'Saved' : 'Save Gem'}`;
+            saveBtn.onclick = (e) => toggleSaveGem(e, gem.id, true);
+
+            const routeBtn = document.getElementById('detail-route-btn');
+            routeBtn.onclick = () => {
+                closeDetailModal();
+                switchTab('planner');
+                document.getElementById('route-destination').value = gem.id;
+                calculateRoute();
+            };
+
+            document.getElementById('modal-detail').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('modal-detail').classList.add('hidden');
+        }
+
+        // ==========================================
+        // ROUTE SAFETY PLANNER LOGIC
+        // ==========================================
+        function populateDestinationDropdown() {
+            const select = document.getElementById('route-destination');
+            select.innerHTML = places.map(p => `
+                <option value="${p.id}">${p.name} (${p.city})</option>
+            `).join('');
+
+            // Also populate report dropdown
+            const repSelect = document.getElementById('report-place');
+            repSelect.innerHTML = places.map(p => `
+                <option value="${p.name}">${p.name} (${p.city})</option>
+            `).join('');
+        }
+
+        function setTravelMode(mode) {
+            travelMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => {
+                b.classList.remove('bg-emerald-500/20', 'border-emerald-500', 'text-emerald-400');
+                b.classList.add('bg-slate-950', 'border-slate-800', 'text-slate-400');
+            });
+            const active = document.getElementById(`mode-${mode}`);
+            active.classList.add('bg-emerald-500/20', 'border-emerald-500', 'text-emerald-400');
+            active.classList.remove('bg-slate-950', 'border-slate-800', 'text-slate-400');
+        }
+
+        function calculateRoute() {
+            const originVal = document.getElementById('route-origin').value;
+            const destId = document.getElementById('route-destination').value;
+            const tod = document.getElementById('route-time').value;
+
+            const [origLat, origLng] = originVal.split('|')[0].split(',').map(Number);
+            const origName = originVal.split('|')[1];
+            const destGem = places.find(p => p.id === destId);
+
+            if (!destGem) return;
+
+            // Approximate Euclidean / Haversine Distance Calculation
+            const distKm = Math.round(calculateHaversine(origLat, origLng, destGem.lat, destGem.lng));
+            let speed = 45; // km/h
+            if (travelMode === 'bike') speed = 35;
+            if (travelMode === 'transit') speed = 30;
+
+            const timeMins = Math.round((distKm / speed) * 60) + 10;
+
+            // Route Safety Adjustments
+            let routeSafety = destGem.safetyScore;
+            if (tod === 'night') routeSafety -= 18;
+            if (tod === 'sunset') routeSafety -= 8;
+            if (travelMode === 'bike') routeSafety -= 5;
+
+            document.getElementById('route-dist').innerText = `${distKm} km`;
+            document.getElementById('route-time-est').innerText = `${timeMins} min`;
+            
+            const safetyEl = document.getElementById('route-safety-score');
+            safetyEl.innerText = `${Math.max(40, routeSafety)} / 100`;
+            if (routeSafety >= 80) safetyEl.className = 'text-lg font-bold text-emerald-400';
+            else if (routeSafety >= 65) safetyEl.className = 'text-lg font-bold text-amber-400';
+            else safetyEl.className = 'text-lg font-bold text-rose-400';
+
+            // Route Checkpoints Checklist
+            const checkpointsEl = document.getElementById('route-checkpoints');
+            checkpointsEl.innerHTML = `
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                    <span class="text-slate-300"><i class="fa-solid fa-road text-sky-400 mr-2"></i> Standard Paved Highway</span>
+                    <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check"></i> Verified</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                    <span class="text-slate-300"><i class="fa-solid fa-shield text-emerald-400 mr-2"></i> Police Control Outposts</span>
+                    <span class="text-slate-200">${destGem.policeProximity}</span>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
+                    <span class="text-slate-300"><i class="fa-solid fa-cloud-sun text-amber-400 mr-2"></i> Daylight Advisory</span>
+                    <span class="${tod === 'night' ? 'text-amber-400 font-bold' : 'text-emerald-400'}">
+                        ${tod === 'night' ? 'Caution: Night Travel' : 'Optimal Operating Hours'}
+                    </span>
+                </div>
+            `;
+
+            // Draw Route Mini Map
+            renderRouteMap(origLat, origLng, destGem.lat, destGem.lng, origName, destGem.name);
+
+            showToast(`Route calculated to ${destGem.name}`);
+        }
+
+        function calculateHaversine(lat1, lon1, lat2, lon2) {
+            const R = 6371; // km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function renderRouteMap(lat1, lng1, lat2, lng2, name1, name2) {
+            if (!routeMap) {
+                routeMap = L.map('route-map', { zoomControl: false }).setView([lat1, lng1], 7);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19
+                }).addTo(routeMap);
+            }
+
+            if (routePolyline) {
+                routeMap.removeLayer(routePolyline);
+            }
+
+            // Remove existing markers if any
+            routeMap.eachLayer((layer) => {
+                if (layer instanceof L.Marker) {
+                    routeMap.removeLayer(layer);
+                }
+            });
+
+            const p1 = [lat1, lng1];
+            const p2 = [lat2, lng2];
+
+            L.marker(p1).addTo(routeMap).bindPopup(`Origin: ${name1}`);
+            L.marker(p2).addTo(routeMap).bindPopup(`Destination: ${name2}`);
+
+            // Draw connecting line
+            routePolyline = L.polyline([p1, p2], {
+                color: '#22c55e',
+                weight: 4,
+                dashArray: '8, 8'
+            }).addTo(routeMap);
+
+            routeMap.fitBounds([p1, p2], { padding: [30, 30] });
+        }
+
+        // ==========================================
+        // COMMUNITY REPORTS & ADVISORIES
+        // ==========================================
+        function renderReportsFeed() {
+            const feed = document.getElementById('reports-feed');
+            feed.innerHTML = reports.map(r => `
+                <div class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-amber-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-triangle-exclamation"></i> ${r.placeName}
+                        </span>
+                        <span class="text-slate-500">${r.time} • by ${r.user}</span>
+                    </div>
+                    <p class="text-xs text-slate-300">${r.msg}</p>
+                </div>
+            `).join('');
+        }
+
+        function openReportModal() {
+            document.getElementById('modal-report').classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('modal-report').classList.add('hidden');
+        }
+
+        function handleReportSubmit(e) {
+            e.preventDefault();
+            const place = document.getElementById('report-place').value;
+            const type = document.getElementById('report-type').value;
+            const msg = document.getElementById('report-msg').value;
+
+            reports.unshift({
+                id: 'rep-' + Date.now(),
+                placeName: place,
+                type: type,
+                msg: msg,
+                time: 'Just now',
+                user: 'You (Tourist)'
+            });
+
+            renderReportsFeed();
+            closeReportModal();
+            document.getElementById('report-form').reset();
+            showToast('Safety advisory broadcasted successfully!');
+        }
+
+        // ==========================================
+        // ADD NEW SPOT HANDLER
+        // ==========================================
+        function openAddSpotModal() {
+            document.getElementById('modal-add-spot').classList.remove('hidden');
+        }
+
+        function closeAddSpotModal() {
+            document.getElementById('modal-add-spot').classList.add('hidden');
+        }
+
+        function handleAddSpot(e) {
+            e.preventDefault();
+            const name = document.getElementById('add-name').value;
+            const city = document.getElementById('add-city').value;
+            const cat = document.getElementById('add-category').value;
+            const lat = parseFloat(document.getElementById('add-lat').value);
+            const lng = parseFloat(document.getElementById('add-lng').value);
+            const desc = document.getElementById('add-desc').value;
+
+            const newGem = {
+                id: 'gem-' + Date.now(),
+                name: name,
+                city: city,
+                state: 'India',
+                lat: lat,
+                lng: lng,
+                category: cat,
+                budget: 200,
+                crowd: 'Quiet',
+                timeOfDay: 'Day',
+                bestTime: '08:00 AM - 05:00 PM',
+                verified: false,
+                rating: 4.5,
+                safetyScore: 82,
+                network: '3G/4G Moderate',
+                policeProximity: '2.5 km',
+                lighting: 'Daylight access',
+                img: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
+                description: desc || 'Newly suggested community hidden gem pending full verification.',
+                tags: ['community', cat]
+            };
+
+            places.unshift(newGem);
+            applyFilters();
+            populateDestinationDropdown();
+            closeAddSpotModal();
+            document.getElementById('add-spot-form').reset();
+            showToast('Hidden Gem suggested for verification!');
+        }
+
+        // ==========================================
+        // SAVED BOOKMARKS
+        // ==========================================
+        function toggleSaveGem(e, id, updateModal = false) {
+            if (e) e.stopPropagation();
+            if (savedGemIds.includes(id)) {
+                savedGemIds = savedGemIds.filter(i => i !== id);
+                showToast('Removed from saved gems');
+            } else {
+                savedGemIds.push(id);
+                showToast('Saved to your collection!');
+            }
+            localStorage.setItem('safegems_saved', JSON.stringify(savedGemIds));
+            updateSavedBadge();
+            renderGemsList();
+
+            if (updateModal) {
+                const isSaved = savedGemIds.includes(id);
+                const saveBtn = document.getElementById('detail-save-btn');
+                if (saveBtn) {
+                    saveBtn.innerHTML = `<i class="fa-${isSaved ? 'solid text-emerald-400' : 'regular'} fa-bookmark"></i> ${isSaved ? 'Saved' : 'Save Gem'}`;
+                }
+            }
+        }
+
+        function updateSavedBadge() {
+            const badge = document.getElementById('saved-count-badge');
+            if (savedGemIds.length > 0) {
+                badge.innerText = savedGemIds.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function openBookmarksModal() {
+            const container = document.getElementById('bookmarks-container');
+            const savedGems = places.filter(p => savedGemIds.includes(p.id));
+
+            if (savedGems.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 italic p-4 text-center">No saved gems yet. Bookmark items to view them here!</p>`;
+            } else {
+                container.innerHTML = savedGems.map(p => `
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                        <div class="flex items-center gap-2.5">
+                            <img src="${p.img}" class="w-10 h-10 rounded-lg object-cover">
+                            <div>
+                                <h4 class="font-bold text-xs text-slate-100">${p.name}</h4>
+                                <p class="text-[10px] text-slate-400">${p.city} • ₹${p.budget}</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleSaveGem(null, '${p.id}'); openBookmarksModal();" class="text-xs text-rose-400 hover:text-rose-300 p-2">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('modal-bookmarks').classList.remove('hidden');
+        }
+
+        function closeBookmarksModal() {
+            document.getElementById('modal-bookmarks').classList.add('hidden');
+        }
+
+        // ==========================================
+        // NAVIGATION TAB SWITCHING
+        // ==========================================
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            // Update Navigation Buttons UI
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-emerald-400', 'bg-slate-800/80');
+                btn.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('text-emerald-400', 'bg-slate-800/80');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            // Mobile Nav UI
+            ['explore', 'planner', 'reports', 'roadmap'].forEach(t => {
+                const mb = document.getElementById(`mobile-nav-${t}`);
+                if (mb) {
+                    if (t === tabId) {
+                        mb.classList.add('text-emerald-400');
+                        mb.classList.remove('text-slate-400');
+                    } else {
+                        mb.classList.remove('text-emerald-400');
+                        mb.classList.add('text-slate-400');
+                    }
+                }
+            });
+
+            if (tabId === 'explore' && map) {
+                setTimeout(() => map.invalidateSize(), 200);
+            }
+            if (tabId === 'planner' && routeMap) {
+                setTimeout(() => routeMap.invalidateSize(), 200);
+            }
+        }
+
+        // ==========================================
+        // TOAST NOTIFICATIONS
+        // ==========================================
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'glass-panel px-4 py-3 rounded-xl border border-emerald-500/40 text-emerald-300 text-xs font-semibold shadow-xl flex items-center gap-2 transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> ${message}`;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
